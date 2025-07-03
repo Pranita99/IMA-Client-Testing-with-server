@@ -1,0 +1,70 @@
+###############################################################################
+#  Workspace & editor                                                          #
+###############################################################################
+.vscode/                 # VS Code settings you don't want in the repo
+*.code-workspace
+*.swp                     # Vim/NeoVim swap files
+*~                        # Generic editor backups
+.DS_Store                 # macOS finder cruft
+Thumbs.db                 # Windows explorer cruft
+
+###############################################################################
+#  Build output / intermediates                                               #
+###############################################################################
+build/                    # your CMake build dir
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# Object & pre-compiled headers
+*.o
+*.obj
+*.gch
+*.pch
+
+# Static & shared libs
+*.a
+*.lib
+*.so
+*.dll
+*.dylib
+
+# Generic compiled binaries
+*.exe
+*.out
+a.out
+*.elf
+
+# The hand-named test/utility executables in your screenshots
+test*
+path?*
+print_ast.exe
+*.abstract*
+*.pretty.smt2
+
+###############################################################################
+#  Node / npm                                                                 #
+###############################################################################
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+###############################################################################
+#  Logs, traces, core dumps                                                   #
+###############################################################################
+*.log
+*.trace
+core
+*.core
+*.stackdump
+
+###############################################################################
+#  Misc                                                                        #
+###############################################################################
+*.tmp
+*.cache
+*.bak
+*.old
