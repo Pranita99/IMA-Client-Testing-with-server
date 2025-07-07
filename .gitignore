@@ -68,3 +68,10 @@ core
 *.cache
 *.bak
 *.old
+
+###############################################################################
+#  Exceptions                                                                  #
+###############################################################################
+# but do track our testPaths folder and its contents
+!testPaths/
+!testPaths/**
