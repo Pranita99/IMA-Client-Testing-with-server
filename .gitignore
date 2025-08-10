@@ -75,3 +75,12 @@ core
 # but do track our testPaths folder and its contents
 !testPaths/
 !testPaths/**
+/build/
+/build/**
+*.smt2
+model.txt
+constraints.smt2
+*.o
+*.obj
+*.exe
+.vscode/

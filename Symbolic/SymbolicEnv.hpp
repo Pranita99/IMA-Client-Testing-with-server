@@ -1,105 +1,123 @@
-// ──────────────────────────────────────────────────────────────────────────
-// Symbolic/SymbolicEnv.hpp
-// ──────────────────────────────────────────────────────────────────────────
 #pragma once
 #include <string>
+#include <sstream>
 #include <unordered_map>
 #include <vector>
-#include <sstream>
+#include <map>
 
-/*  A *very* small “symbol table” that maps each program-level
- *  variable name to one fresh SMT-id (x1, x2, …) **once per path**.
- *  The class also collects raw predicates and can emit a full
- *  self-contained SMT-LIB script.
- */
 class SymbolicEnv
 {
 public:
-    /* ---------------------------------------------------------------
-     * 1.  Bind or look-up the SMT identifier for a variable.
-     *     On first sighting we allocate a fresh xN.
-     * --------------------------------------------------------------*/
+    struct MapSyms { std::string dom, val; };
+
+    /* ── Map registration ─────────────────────────────────────────────── */
+    const MapSyms& declareMap(const std::string& base)
+    {
+        auto& slot = maps[base];
+        if (slot.dom.empty()) {
+            slot.dom = "Dom_" + base;
+            slot.val = "Val_" + base;
+        }
+        return slot;
+    }
+    bool           isMap (const std::string& b) const { return maps.count(b); }
+    const MapSyms& getMap(const std::string& b) const { return maps.at(b);    }
+
+    /* ── Scalar symbol management (SSA + fresh) ───────────────────────── */
     const std::string& symFor(const std::string& var)
     {
-        auto [it, inserted] = env.emplace(var, "");
+        auto [it, inserted] = scalars.emplace(var, "");
         if (inserted) {
-            it->second = "x" + std::to_string(++freshCounter);
-            insertionOrder.push_back(it->second);              // keep order
+            it->second          = "x" + std::to_string(++fresh);
+            order.push_back(it->second);
+            id2var_[it->second] = var;
         }
         return it->second;
     }
 
-    /* ---------------------------------------------------------------
-     * 2.  Add a predicate already in valid SMT-LIB syntax.
-     * --------------------------------------------------------------*/
-    void addPredicate(const std::string& p)
+    const std::string& bumpScalar(const std::string& var)
     {
-        if (!p.empty()) predicates.push_back(p);
+        auto& id = scalars[var];
+        id = "x" + std::to_string(++fresh);
+        order.push_back(id);
+        id2var_[id] = var;
+        return scalars[var];
     }
 
-    /* ---------------------------------------------------------------
-     * 3.  Serialise a complete SMT-LIB file (optionally omit footer).
-     * --------------------------------------------------------------*/
-    std::string toSMTLib(bool withFooter = true) const
+    std::string freshSym(const std::string& tag)
+    {
+        std::string id = "x" + std::to_string(++fresh);
+        order.push_back(id);
+        id2var_[id] = tag;  // still useful when back-mapping
+        return id;
+    }
+
+    /* ── Constraints & warnings ───────────────────────────────────────── */
+    void addPredicate(const std::string& p) {
+        if (!p.empty()) { preds.push_back(p); names.push_back("c" + std::to_string(++pc)); }
+    }
+    void addWarning  (const std::string& w) { if (!w.empty()) warnings.push_back(w); }
+    const std::vector<std::string>& getWarnings() const { return warnings; }
+
+    /* ── SMT-LIB serialisation ────────────────────────────────────────── */
+    // Default: ask only for the model (no unsat-core request → no warning on SAT)
+    std::string toSMTLib(bool footer = true) const
+    {
+        return emitSmt(/*askCore=*/false, /*askModel=*/true, footer);
+    }
+
+    // When debugging UNSAT: use this version to request the unsat core.
+    // Note: Z3 will complain if the problem is SAT (that's expected).
+    std::string toSMTLibWithUnsatCore(bool footer = true) const
+    {
+        return emitSmt(/*askCore=*/true, /*askModel=*/false, footer);
+    }
+
+    const std::unordered_map<std::string,std::string>& var2id() const { return scalars; }
+    const std::unordered_map<std::string,std::string>& id2var() const { return id2var_; }
+
+private:
+    std::string emitSmt(bool askCore, bool askModel, bool footer) const
     {
         std::ostringstream out;
+        out << "(set-logic ALL)\n";
+        if (askModel) out << "(set-option :produce-models true)\n";
+        if (askCore)  out << "(set-option :produce-unsat-cores true)\n";
+        out << '\n';
 
-        /* a) declare every xN that occurred in source order */
-        for (const auto& id : insertionOrder)
+        for (const auto& w : warnings) out << "; WARN: " << w << "\n";
+        if (!warnings.empty()) out << '\n';
+
+        for (const auto& id : order)
             out << "(declare-fun " << id << " () String)\n";
+        if (!order.empty()) out << '\n';
 
-        /* b) one-shot declarations for the helper functions that
-               may occur inside predicates                                   */
-        static const char* extra[] = {
-            "(declare-fun input         (String)           String)",
-            "(declare-fun mapped_value  (String String)    String)",
-            "(declare-fun dom           (String)           String)",
-            "(declare-fun not_in        (String String)    Bool)",
-            "(declare-fun in_dom        (String String)    Bool)",
-            "(declare-fun in            (String String)    Bool)",
-            "(declare-fun and_operator  (Bool Bool)        Bool)",
-            "(declare-fun getMapAtMatch (String String)    String)",
-            "(declare-fun is_false      (Bool)             Bool)",
-            "(declare-fun is_true       (Bool)             Bool)"
-        };
-        for (auto l : extra) out << l << '\n';
+        for (const auto& [base, ms] : maps) {
+            out << "(declare-const " << ms.dom << " (Array String Bool))\n";
+            out << "(declare-const " << ms.val << " (Array String String))\n\n";
+        }
 
-        /* c) path constraints */
-        for (const auto& p : predicates)
-            out << "(assert " << p << ")\n";
+        for (size_t i=0;i<preds.size();++i)
+            out << "(assert (! " << preds[i] << " :named " << names[i] << "))\n";
 
-        /* d) optional footer to make file immediately solvable */
-        if (withFooter)
-            out << "(check-sat)\n(get-model)\n";
-
+        if (footer) {
+            out << "\n(check-sat)\n";
+            if (askCore)  out << "(get-unsat-core)\n";
+            if (askModel) out << "(get-model)\n";
+        }
         return out.str();
     }
 
-    /* ---------------------------------------------------------------
-     * 4.  Public read-only access – used by run_se_driver for
-     *     pretty-printing human-friendly literals.
-     * --------------------------------------------------------------*/
-    const std::unordered_map<std::string,std::string>& var2id() const
-    { return env; }
+    // scalars
+    std::unordered_map<std::string,std::string> scalars; // var -> xN
+    std::unordered_map<std::string,std::string> id2var_;  // xN  -> var/tag
+    std::vector<std::string>                    order;    // decl order
+    std::vector<std::string>                    preds;
+    std::vector<std::string>                    names;
+    std::vector<std::string>                    warnings;
+    int                                         fresh = 0;
+    mutable int                                 pc = 0;
 
-    /* ---------------------------------------------------------------
-     * 5.  Helpers & reset (mostly for unit tests).
-     * --------------------------------------------------------------*/
-    std::size_t numSymbols()    const { return env.size(); }
-    std::size_t numPredicates() const { return predicates.size(); }
-
-    void clear()
-    {
-        env.clear();
-        insertionOrder.clear();
-        predicates.clear();
-        freshCounter = 0;
-    }
-
-private:
-    /* implementation state -----------------------------------------*/
-    std::unordered_map<std::string,std::string> env;   // var  →  xN
-    std::vector<std::string>          insertionOrder;  // stable order
-    std::vector<std::string>          predicates;      // collected (assert …)
-    int                               freshCounter = 0;
+    // maps
+    std::map<std::string,MapSyms>               maps;
 };
