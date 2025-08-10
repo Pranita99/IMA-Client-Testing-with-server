@@ -4,27 +4,32 @@
 #include "../ast.hpp"
 #include "SymbolicEnv.hpp"
 #include <string>
+#include <vector>
 
 /*  Visitor that walks the mutated (IMA-enriched) client program
  *  and converts every concrete assignment / assume / assert into
  *  SMT-LIB predicates, storing them in a shared SymbolicEnv.
+ *
+ *  strictMode (default=false) controls tolerant shorthand like
+ *  in(x,"lit") => (= x "lit").
  */
 class SEVisitor : public ASTVisitor {
 public:
-    explicit SEVisitor(SymbolicEnv& sigma) : sigma(sigma) {}
+    explicit SEVisitor(SymbolicEnv& sigma, bool strict=false)
+        : sigma(sigma), strictMode(strict) {}
 
     /* =====  statements we translate  ===== */
     void visit(const Assign& n)       override;
     void visit(const FuncCallStmt& n) override;
-    void visit(const Program& n)      override;   // definition lives in .cpp
+    void visit(const Program& n)      override;
 
-    /* =====  expressions we translate via smtOf()  ===== */
+    /* =====  expressions translated via smtOf()  ===== */
     void visit(const Var& n)      override;
     void visit(const FuncCall& n) override;
     void visit(const Num& n)      override;
     void visit(const String& n)   override;
 
-    /* =====  everything else is ignored for path-constraint generation ===== */
+    /* =====  everything else ignored for path-constraints ===== */
     void visit(const Set&)        override {}
     void visit(const Map&)        override {}
     void visit(const Tuple&)      override {}
@@ -41,7 +46,9 @@ public:
     void visit(const Init&)       override {}
     void visit(const Spec&)       override {}
 
+    void setStrict(bool b) { strictMode = b; }
+
 private:
-    SymbolicEnv& sigma;               // shared environment that stores symbols & predicates
-    std::string smtOf(const Expr& e); // helper: Expr → SMT-LIB snippet
+    SymbolicEnv& sigma;
+    bool         strictMode = false;
 };
