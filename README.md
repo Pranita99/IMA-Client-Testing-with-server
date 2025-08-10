@@ -79,6 +79,14 @@ Edit one line to point at the path you want:
 
 #include "../testPaths/webApp1/path1.cpp"   // ← adjust
 
+# Default = path3
+Compile : g++ -std=c++17 -O2 -Wall -I. -ISymbolic \
+  Scratch/ExpoSEVisitor_stubs.cpp \
+  Scratch/print_ast.cpp \
+  -o build/print_ast
+
+Once done, run this command : ./build/print_ast
+
 5. Typical workflow cheat-sheet
 
 | Task                                | Command                                            |
@@ -86,7 +94,7 @@ Edit one line to point at the path you want:
 | Rebuild everything & regenerate SMT | `Tools/build_all_paths.sh`                         |
 | Inspect solver result               | `z3 -model build/paths/<name>.smt2`                |
 | Read human-friendly SMT             | `wslview build/paths/<name>.pretty.smt2`           |
-| Print an abstract test case         | *edit* `Scratch/print_ast.cpp` → `g++ …` → run exe |
+
 
 
 
