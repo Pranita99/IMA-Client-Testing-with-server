@@ -87,6 +87,9 @@ Compile : g++ -std=c++17 -O2 -Wall -I. -ISymbolic \
 
 Once done, run this command : ./build/print_ast
 
+# To view Jason File for a Particular Path ( Change the path accordingly ) :
+    cat build/paths/webApp1_path3.model.json
+
 5. Typical workflow cheat-sheet
 
 | Task                                | Command                                            |
