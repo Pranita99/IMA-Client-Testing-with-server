@@ -72,7 +72,8 @@ z3 -model build/paths/webApp1_path3.smt2
 
 4. Printing abstract test cases
 The normal pipeline skips printing for performance.
-When you need a human-friendly listing:
+
+**Follow the below steps When you need a human-friendly listing just for Abstract Test Case & Symbolic Path Constraints:**
 
 Open Scratch/print_ast.cpp
 Edit one line to point at the path you want:
@@ -87,10 +88,22 @@ Compile : g++ -std=c++17 -O2 -Wall -I. -ISymbolic \
 
 Once done, run this command : ./build/print_ast
 
-# To view Jason File for a Particular Path ( Change the path accordingly ) :
-    cat build/paths/webApp1_path3.model.json
+5. Post Build, Cheatsheet to check all the files that got created , and their content
 
-5. Typical workflow cheat-sheet
+     A. Inspect the human-friendly SMT  : less build/paths/webApp1_path3.pretty.smt2
+     B. See the var ↔ xN mapping : column -s, -t build/paths/webApp1_path3.map.csv | less
+         (If column isn’t available, just cat it.)
+     C . Inspect the model JSON (values for each program var) : cat build/paths/webApp1_path3.model.json
+                               With jq                        :  jq . build/paths/webApp1_path3.model.json
+      D. Read the concrete test case (CTC) ->
+             1. Text Summary                  : cat build/paths/webApp1_path3.ctc.txt
+              2. Structured form              :  cat build/paths/webApp1_path3.ctc.json
+
+# or if jq is present 
+jq . build/paths/webApp1_path3.ctc.json
+
+        
+6. Typical workflow cheat-sheet
 
 | Task                                | Command                                            |
 | ----------------------------------- | -------------------------------------------------- |
