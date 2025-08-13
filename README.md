@@ -88,7 +88,8 @@ Compile : g++ -std=c++17 -O2 -Wall -I. -ISymbolic \
 
 Once done, run this command : ./build/print_ast
 
-5. Post Build, Cheatsheet to check all the files that got created , and their content
+5. **Post Build, Cheatsheet to check all the files that got created , and their content.
+ Please change the file name accordingly, for example --> Change WebApp1_path3 to whichever WebApp and paths you prefer to test .**
 
      A. Inspect the human-friendly SMT  : less build/paths/webApp1_path3.pretty.smt2
      B. See the var ↔ xN mapping : column -s, -t build/paths/webApp1_path3.map.csv | less
