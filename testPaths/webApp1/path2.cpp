@@ -5,252 +5,172 @@
 
 using namespace std;
 
-/* ─────────────────────────────────────────────
- * 1.  Client-side test path (imperative program)
- * ───────────────────────────────────────────── */
 static Program buildClientProgram()
 {
-    vector<unique_ptr<Stmt>> stmts;
+    vector<unique_ptr<Stmt>> s;
 
-    /* ------------------------------------------------ signup_notok */
-    {
-        auto lhs = make_unique<Var>("username");
-        vector<unique_ptr<Expr>> a;  a.push_back(make_unique<Var>(""));
-        stmts.push_back(make_unique<Assign>(move(lhs),
-                         make_unique<FuncCall>("input", move(a))));
-    }
-    {
-        auto lhs = make_unique<Var>("password");
-        vector<unique_ptr<Expr>> a;  a.push_back(make_unique<Var>(""));
-        stmts.push_back(make_unique<Assign>(move(lhs),
-                         make_unique<FuncCall>("input", move(a))));
-    }
-    {
+    auto in = [&](const string& v){
+        auto lhs = make_unique<Var>(v);
         vector<unique_ptr<Expr>> a;
-        a.push_back(make_unique<Var>("username"));
-        a.push_back(make_unique<Var>("password"));
-        stmts.push_back(make_unique<FuncCallStmt>(
-            make_unique<FuncCall>("signup_notok", move(a))));
+        s.push_back(make_unique<Assign>(move(lhs),
+            make_unique<FuncCall>("input", move(a))));
+    };
+
+    // login_notok
+    in("u");
+    in("p");
+    {
+        vector<unique_ptr<Expr>> args;
+        args.push_back(make_unique<Var>("u"));
+        args.push_back(make_unique<Var>("p"));
+        s.push_back(make_unique<FuncCallStmt>(
+            make_unique<FuncCall>("login_notok", move(args))));
     }
 
-    /* ------------------------------------------------ signup_success */
+    // login_ok
+    in("u");
+    in("p");
     {
-        auto lhs = make_unique<Var>("username");
-        vector<unique_ptr<Expr>> a;  a.push_back(make_unique<Var>(""));
-        stmts.push_back(make_unique<Assign>(move(lhs),
-                         make_unique<FuncCall>("input", move(a))));
-    }
-    {
-        auto lhs = make_unique<Var>("password");
-        vector<unique_ptr<Expr>> a;  a.push_back(make_unique<Var>(""));
-        stmts.push_back(make_unique<Assign>(move(lhs),
-                         make_unique<FuncCall>("input", move(a))));
-    }
-    {
-        vector<unique_ptr<Expr>> a;
-        a.push_back(make_unique<Var>("username"));
-        a.push_back(make_unique<Var>("password"));
-        stmts.push_back(make_unique<FuncCallStmt>(
-            make_unique<FuncCall>("signup_success", move(a))));
+        vector<unique_ptr<Expr>> args;
+        args.push_back(make_unique<Var>("u"));
+        args.push_back(make_unique<Var>("p"));
+        s.push_back(make_unique<FuncCallStmt>(
+            make_unique<FuncCall>("login_ok", move(args))));
     }
 
-    /* ------------------------------------------------ login_notok */
+    // logout
     {
-        auto lhs = make_unique<Var>("username");
-        vector<unique_ptr<Expr>> a;  a.push_back(make_unique<Var>(""));
-        stmts.push_back(make_unique<Assign>(move(lhs),
-                         make_unique<FuncCall>("input", move(a))));
-    }
-    {
-        auto lhs = make_unique<Var>("password");
-        vector<unique_ptr<Expr>> a;  a.push_back(make_unique<Var>(""));
-        stmts.push_back(make_unique<Assign>(move(lhs),
-                         make_unique<FuncCall>("input", move(a))));
-    }
-    {
-        vector<unique_ptr<Expr>> a;
-        a.push_back(make_unique<Var>("username"));
-        a.push_back(make_unique<Var>("password"));
-        stmts.push_back(make_unique<FuncCallStmt>(
-            make_unique<FuncCall>("login_notok", move(a))));
+        vector<unique_ptr<Expr>> args;
+        args.push_back(make_unique<Var>("u"));
+        s.push_back(make_unique<FuncCallStmt>(
+            make_unique<FuncCall>("logout", move(args))));
     }
 
-    /* ------------------------------------------------ login_success */
-    {
-        auto lhs = make_unique<Var>("username");
-        vector<unique_ptr<Expr>> a;  a.push_back(make_unique<Var>(""));
-        stmts.push_back(make_unique<Assign>(move(lhs),
-                         make_unique<FuncCall>("input", move(a))));
-    }
-    {
-        auto lhs = make_unique<Var>("password");
-        vector<unique_ptr<Expr>> a;  a.push_back(make_unique<Var>(""));
-        stmts.push_back(make_unique<Assign>(move(lhs),
-                         make_unique<FuncCall>("input", move(a))));
-    }
-    {
-        vector<unique_ptr<Expr>> a;
-        a.push_back(make_unique<Var>("username"));
-        a.push_back(make_unique<Var>("password"));
-        stmts.push_back(make_unique<FuncCallStmt>(
-            make_unique<FuncCall>("login_success", move(a))));
-    }
-
-    return Program(std::move(stmts));
+    return Program(std::move(s));
 }
 
-/* ─────────────────────────────────────────────
- * 2.  API specification for the four endpoints
- * ───────────────────────────────────────────── */
 static Spec buildSpec()
 {
-    auto mapVal = [](const string& m,const string& k)
-    {
+    auto mapVal = [](const string& m, const string& k){
         vector<unique_ptr<Expr>> mv;
         mv.push_back(make_unique<Var>(m));
         mv.push_back(make_unique<Var>(k));
         return make_unique<FuncCall>("mapped_value", move(mv));
     };
 
-    vector<unique_ptr<API>> blocks;
+    vector<unique_ptr<API>> B;
 
-/* ---------- 1. signup_notok ---------- */
+    // login_notok
     {
-        /* pre: not_in(u , dom(U)) */
-        vector<unique_ptr<Expr>> a;
-        a.push_back(make_unique<Var>("u"));
-        { vector<unique_ptr<Expr>> h; h.push_back(make_unique<Var>("U"));
-          a.push_back(make_unique<FuncCall>("dom", move(h))); }
-        auto pre = make_unique<FuncCall>("not_in", move(a));
+        vector<unique_ptr<Expr>> eq;
+        eq.push_back(mapVal("U", "u"));
+        eq.push_back(make_unique<Var>("p"));
 
-        /* call */
+        vector<unique_ptr<Expr>> conj;
+        conj.push_back(make_unique<FuncCall>("equals", move(eq)));
+        {
+            vector<unique_ptr<Expr>> h;
+            h.push_back(make_unique<Var>("T"));
+            h.push_back(make_unique<Var>("token"));
+            conj.push_back(make_unique<FuncCall>("in_dom", move(h)));
+        }
+
+        vector<unique_ptr<Expr>> ψ;
+        ψ.push_back(make_unique<FuncCall>("and_operator", move(conj)));
+        auto pre = make_unique<FuncCall>("is_false", move(ψ));
+
         vector<unique_ptr<Expr>> ca;
         ca.push_back(make_unique<Var>("u"));
         ca.push_back(make_unique<Var>("p"));
-        auto callFn = make_unique<FuncCall>("signup_notok", move(ca));
+        auto call = make_unique<FuncCall>("login_notok", move(ca));
 
-        /* post: is_false( equals(U[u],p) ) */
-        vector<unique_ptr<Expr>> eq;
-        eq.push_back(mapVal("U","u"));
-        eq.push_back(make_unique<Var>("p"));
+        vector<unique_ptr<Expr>> postEq;
+        postEq.push_back(mapVal("T", "u"));
+        postEq.push_back(make_unique<Var>("token"));
         vector<unique_ptr<Expr>> wrap;
-        wrap.push_back(make_unique<FuncCall>("equals", move(eq)));
+        wrap.push_back(make_unique<FuncCall>("equals", move(postEq)));
         auto post = make_unique<FuncCall>("is_false", move(wrap));
 
-        Response resp(HTTPResponseCode::BAD_REQUEST_400, post->clone());
-        auto apiCall = make_unique<APIcall>(move(callFn), move(resp));
-        blocks.push_back(make_unique<API>(move(pre), move(apiCall), move(resp)));
+        Response r(HTTPResponseCode::BAD_REQUEST_400, post->clone());
+        B.push_back(make_unique<API>(move(pre),
+                  make_unique<APIcall>(move(call), move(r)), move(r)));
     }
 
-/* ---------- 2. signup_success ---------- */
+    // login_ok
     {
-        vector<unique_ptr<Expr>> a;
-        a.push_back(make_unique<Var>("u"));
-        { vector<unique_ptr<Expr>> h; h.push_back(make_unique<Var>("U"));
-          a.push_back(make_unique<FuncCall>("dom", move(h))); }
-        auto pre = make_unique<FuncCall>("not_in", move(a));
-
-        vector<unique_ptr<Expr>> ca;
-        ca.push_back(make_unique<Var>("u"));
-        ca.push_back(make_unique<Var>("p"));
-        auto callFn = make_unique<FuncCall>("signup_success", move(ca));
-
         vector<unique_ptr<Expr>> eq;
-        eq.push_back(mapVal("U","u"));
-        eq.push_back(make_unique<Var>("p"));
-        auto post = make_unique<FuncCall>("equals", move(eq));
-
-        Response resp(HTTPResponseCode::CREATED_201, post->clone());
-        auto apiCall = make_unique<APIcall>(move(callFn), move(resp));
-        blocks.push_back(make_unique<API>(move(pre), move(apiCall), move(resp)));
-    }
-
-/* ---------- 3. login_notok ---------- */
-    {
-        /* pre: is_false( equals(U[u],p) ∧ in_dom(T,token) ) */
-        vector<unique_ptr<Expr>> eq;
-        eq.push_back(mapVal("U","u"));
+        eq.push_back(mapVal("U", "u"));
         eq.push_back(make_unique<Var>("p"));
 
         vector<unique_ptr<Expr>> conj;
         conj.push_back(make_unique<FuncCall>("equals", move(eq)));
-        { vector<unique_ptr<Expr>> h; h.push_back(make_unique<Var>("T"));
-          h.push_back(make_unique<Var>("token"));
-          conj.push_back(make_unique<FuncCall>("in_dom", move(h))); }
-
-        vector<unique_ptr<Expr>> wrapPre;          /*  FIX ▲  */
-        wrapPre.push_back(make_unique<FuncCall>("and_operator", move(conj)));
-        auto pre = make_unique<FuncCall>("is_false", move(wrapPre));
-
-        /* call */
-        vector<unique_ptr<Expr>> ca;
-        ca.push_back(make_unique<Var>("u"));
-        ca.push_back(make_unique<Var>("p"));
-        auto callFn = make_unique<FuncCall>("login_notok", move(ca));
-
-        /* post: is_false( equals(T[token],u) ) */
-        vector<unique_ptr<Expr>> eq2;
-        eq2.push_back(mapVal("T","u"));
-        eq2.push_back(make_unique<Var>("token"));
-        vector<unique_ptr<Expr>> wrapPost;         /*  FIX ▲  */
-        wrapPost.push_back(make_unique<FuncCall>("equals", move(eq2)));
-        auto post = make_unique<FuncCall>("is_false", move(wrapPost));
-
-        Response resp(HTTPResponseCode::BAD_REQUEST_400, post->clone());
-        auto apiCall = make_unique<APIcall>(move(callFn), move(resp));
-        blocks.push_back(make_unique<API>(move(pre), move(apiCall), move(resp)));
-    }
-
-/* ---------- 4. login_success ---------- */
-    {
-        vector<unique_ptr<Expr>> eq;
-        eq.push_back(mapVal("U","u"));
-        eq.push_back(make_unique<Var>("p"));
-
-        vector<unique_ptr<Expr>> conj;
-        conj.push_back(make_unique<FuncCall>("equals", move(eq)));
-        { vector<unique_ptr<Expr>> h; h.push_back(make_unique<Var>("T"));
-          h.push_back(make_unique<Var>("token"));
-          conj.push_back(make_unique<FuncCall>("in_dom", move(h))); }
+        {
+            vector<unique_ptr<Expr>> h;
+            h.push_back(make_unique<Var>("T"));
+            h.push_back(make_unique<Var>("token"));
+            conj.push_back(make_unique<FuncCall>("in_dom", move(h)));
+        }
         auto pre = make_unique<FuncCall>("and_operator", move(conj));
 
         vector<unique_ptr<Expr>> ca;
         ca.push_back(make_unique<Var>("u"));
         ca.push_back(make_unique<Var>("p"));
-        auto callFn = make_unique<FuncCall>("login_success", move(ca));
+        auto call = make_unique<FuncCall>("login_ok", move(ca));
 
-        vector<unique_ptr<Expr>> eq2;
-        eq2.push_back(mapVal("T","u"));
-        eq2.push_back(make_unique<Var>("token"));
-        auto post = make_unique<FuncCall>("equals", move(eq2));
+        vector<unique_ptr<Expr>> postEq;
+        postEq.push_back(mapVal("T", "u"));
+        postEq.push_back(make_unique<Var>("token"));
+        auto post = make_unique<FuncCall>("equals", move(postEq));
 
-        Response resp(HTTPResponseCode::OK_200, post->clone());
-        auto apiCall = make_unique<APIcall>(move(callFn), move(resp));
-        blocks.push_back(make_unique<API>(move(pre), move(apiCall), move(resp)));
+        Response r(HTTPResponseCode::OK_200, post->clone());
+        B.push_back(make_unique<API>(move(pre),
+                  make_unique<APIcall>(move(call), move(r)), move(r)));
     }
 
-/* ---------- globals & init ---------- */
-    vector<unique_ptr<Decl>> globals;
-    globals.push_back(make_unique<Decl>(
-        "U", make_unique<MapType>(make_unique<TypeConst>("string"),
-                                  make_unique<TypeConst>("string"))));
-    globals.push_back(make_unique<Decl>(
-        "T", make_unique<MapType>(make_unique<TypeConst>("string"),
-                                  make_unique<TypeConst>("string"))));
-    globals.push_back(make_unique<Decl>("token", make_unique<TypeConst>("string")));
+    // logout
+    {
+        vector<unique_ptr<Expr>> preEq;
+        preEq.push_back(mapVal("T", "u"));
+        preEq.push_back(make_unique<Var>("token"));
+        auto pre = make_unique<FuncCall>("equals", move(preEq));
 
-    vector<unique_ptr<Init>> inits;
-    inits.push_back(make_unique<Init>(
-        "U", make_unique<Map>(vector<pair<unique_ptr<Var>,unique_ptr<Expr>>>{})));
-    inits.push_back(make_unique<Init>(
-        "T", make_unique<Map>(vector<pair<unique_ptr<Var>,unique_ptr<Expr>>>{})));
+        vector<unique_ptr<Expr>> ca;
+        ca.push_back(make_unique<Var>("u"));
+        auto call = make_unique<FuncCall>("logout", move(ca));
 
-    return Spec(std::move(globals), std::move(inits),
-                vector<unique_ptr<FuncDecl>>{}, std::move(blocks));
+        vector<unique_ptr<Expr>> postA;
+        postA.push_back(make_unique<Var>("token"));
+        {
+            vector<unique_ptr<Expr>> h;
+            h.push_back(make_unique<Var>("T"));
+            postA.push_back(make_unique<FuncCall>("dom", move(h)));
+        }
+        auto post = make_unique<FuncCall>("not_in", move(postA));
+
+        Response r(HTTPResponseCode::OK_200, post->clone());
+        B.push_back(make_unique<API>(move(pre),
+                  make_unique<APIcall>(move(call), move(r)), move(r)));
+    }
+
+    vector<unique_ptr<Decl>> G;
+    G.push_back(make_unique<Decl>("U",
+        make_unique<MapType>(make_unique<TypeConst>("string"),
+                             make_unique<TypeConst>("string"))));
+    G.push_back(make_unique<Decl>("T",
+        make_unique<MapType>(make_unique<TypeConst>("string"),
+                             make_unique<TypeConst>("string"))));
+    G.push_back(make_unique<Decl>("token",
+        make_unique<TypeConst>("string")));
+
+    vector<unique_ptr<Init>> I;
+    I.push_back(make_unique<Init>("U",
+        make_unique<Map>(vector<pair<unique_ptr<Var>,unique_ptr<Expr>>>{})));
+    I.push_back(make_unique<Init>("T",
+        make_unique<Map>(vector<pair<unique_ptr<Var>,unique_ptr<Expr>>>{})));
+
+    return Spec(std::move(G), std::move(I),
+                vector<unique_ptr<FuncDecl>>{}, std::move(B));
 }
 
-/* ─────────────────────────────────────────────
- * 3.  Exports picked up by the driver
- * ───────────────────────────────────────────── */
 Program clientProgram = buildClientProgram();
 Spec    spec          = buildSpec();

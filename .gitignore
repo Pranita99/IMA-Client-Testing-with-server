@@ -84,3 +84,4 @@ constraints.smt2
 *.obj
 *.exe
 .vscode/
+/build/
