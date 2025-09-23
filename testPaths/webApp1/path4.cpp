@@ -5,59 +5,56 @@
 
 using namespace std;
 
-/* ────────────────────────────────────────────────
- * 1. Build the client Program (imperative path)
- * ──────────────────────────────────────────────── */
 static Program buildClientProgram()
 {
     vector<unique_ptr<Stmt>> stmts;
 
-    /* --- SIGN-UP success ----------------------------------- */
+    // SIGN-UP success
     {
-        auto lhs = make_unique<Var>("username");
-        vector<unique_ptr<Expr>> a; a.push_back(make_unique<Var>(""));
-        stmts.push_back(make_unique<Assign>( move(lhs),
+        auto lhs = make_unique<Var>("u");
+        vector<unique_ptr<Expr>> a;
+        stmts.push_back(make_unique<Assign>(move(lhs),
                          make_unique<FuncCall>("input", move(a))));
     }
     {
-        auto lhs = make_unique<Var>("password");
-        vector<unique_ptr<Expr>> a; a.push_back(make_unique<Var>(""));
-        stmts.push_back(make_unique<Assign>( move(lhs),
+        auto lhs = make_unique<Var>("p");
+        vector<unique_ptr<Expr>> a;
+        stmts.push_back(make_unique<Assign>(move(lhs),
                          make_unique<FuncCall>("input", move(a))));
     }
     {
         vector<unique_ptr<Expr>> a;
-        a.push_back(make_unique<Var>("username"));
-        a.push_back(make_unique<Var>("password"));
+        a.push_back(make_unique<Var>("u"));
+        a.push_back(make_unique<Var>("p"));
         stmts.push_back(make_unique<FuncCallStmt>(
             make_unique<FuncCall>("signup_success", move(a))));
     }
 
-    /* --- LOGIN success ------------------------------------- */
+    // LOGIN success
     {
-        auto lhs = make_unique<Var>("username");
-        vector<unique_ptr<Expr>> a; a.push_back(make_unique<Var>(""));
-        stmts.push_back(make_unique<Assign>( move(lhs),
+        auto lhs = make_unique<Var>("u");
+        vector<unique_ptr<Expr>> a;
+        stmts.push_back(make_unique<Assign>(move(lhs),
                          make_unique<FuncCall>("input", move(a))));
     }
     {
-        auto lhs = make_unique<Var>("password");
-        vector<unique_ptr<Expr>> a; a.push_back(make_unique<Var>(""));
-        stmts.push_back(make_unique<Assign>( move(lhs),
+        auto lhs = make_unique<Var>("p");
+        vector<unique_ptr<Expr>> a;
+        stmts.push_back(make_unique<Assign>(move(lhs),
                          make_unique<FuncCall>("input", move(a))));
     }
     {
         vector<unique_ptr<Expr>> a;
-        a.push_back(make_unique<Var>("username"));
-        a.push_back(make_unique<Var>("password"));
+        a.push_back(make_unique<Var>("u"));
+        a.push_back(make_unique<Var>("p"));
         stmts.push_back(make_unique<FuncCallStmt>(
             make_unique<FuncCall>("login_success", move(a))));
     }
 
-    /* --- LOGOUT -------------------------------------------- */
+    // LOGOUT
     {
         vector<unique_ptr<Expr>> a;
-        a.push_back(make_unique<Var>("username"));
+        a.push_back(make_unique<Var>("u"));
         stmts.push_back(make_unique<FuncCallStmt>(
             make_unique<FuncCall>("logout", move(a))));
     }
@@ -65,9 +62,6 @@ static Program buildClientProgram()
     return Program(std::move(stmts));
 }
 
-/* ────────────────────────────────────────────────
- * 2. Build the API specification
- * ──────────────────────────────────────────────── */
 static Spec buildSpec()
 {
     auto mapVal = [](const string& map, const string& key){
@@ -79,12 +73,15 @@ static Spec buildSpec()
 
     vector<unique_ptr<API>> blocks;
 
-    /* ----- signup_success ----- */
+    // signup_success
     {
         vector<unique_ptr<Expr>> preA;
         preA.push_back(make_unique<Var>("u"));
-        { vector<unique_ptr<Expr>> h; h.push_back(make_unique<Var>("U"));
-          preA.push_back(make_unique<FuncCall>("dom", move(h))); }
+        {
+            vector<unique_ptr<Expr>> h;
+            h.push_back(make_unique<Var>("U"));
+            preA.push_back(make_unique<FuncCall>("dom", move(h)));
+        }
         auto pre = make_unique<FuncCall>("not_in", move(preA));
 
         vector<unique_ptr<Expr>> args;
@@ -93,7 +90,7 @@ static Spec buildSpec()
         auto callFn = make_unique<FuncCall>("signup_success", move(args));
 
         vector<unique_ptr<Expr>> eq;
-        eq.push_back(mapVal("U","u"));
+        eq.push_back(mapVal("U", "u"));
         eq.push_back(make_unique<Var>("p"));
         auto post = make_unique<FuncCall>("equals", move(eq));
 
@@ -102,16 +99,24 @@ static Spec buildSpec()
         blocks.push_back(make_unique<API>(move(pre), move(apicall), move(resp)));
     }
 
-    /* ----- login_success ----- */
+    // login_success
     {
-        vector<unique_ptr<Expr>> eq;
-        eq.push_back(mapVal("U","u"));
-        eq.push_back(make_unique<Var>("p"));
         vector<unique_ptr<Expr>> conj;
-        conj.push_back(make_unique<FuncCall>("equals", move(eq)));
-        { vector<unique_ptr<Expr>> h; h.push_back(make_unique<Var>("T"));
-          h.push_back(make_unique<Var>("token"));
-          conj.push_back(make_unique<FuncCall>("in_dom", move(h))); }
+
+        {
+            vector<unique_ptr<Expr>> eq;
+            eq.push_back(mapVal("U", "u"));
+            eq.push_back(make_unique<Var>("p"));
+            conj.push_back(make_unique<FuncCall>("equals", move(eq)));
+        }
+
+        {
+            vector<unique_ptr<Expr>> h;
+            h.push_back(make_unique<Var>("T"));
+            h.push_back(make_unique<Var>("u"));
+            conj.push_back(make_unique<FuncCall>("in_dom", move(h)));
+        }
+
         auto pre = make_unique<FuncCall>("and_operator", move(conj));
 
         vector<unique_ptr<Expr>> args;
@@ -120,7 +125,7 @@ static Spec buildSpec()
         auto callFn = make_unique<FuncCall>("login_success", move(args));
 
         vector<unique_ptr<Expr>> eq2;
-        eq2.push_back(mapVal("T","u"));
+        eq2.push_back(mapVal("T", "u"));
         eq2.push_back(make_unique<Var>("token"));
         auto post = make_unique<FuncCall>("equals", move(eq2));
 
@@ -129,13 +134,11 @@ static Spec buildSpec()
         blocks.push_back(make_unique<API>(move(pre), move(apicall), move(resp)));
     }
 
-    /* ----- logout ----- */
+    // logout
     {
         vector<unique_ptr<Expr>> preA;
-        preA.push_back(make_unique<Var>("u"));
-        { vector<unique_ptr<Expr>> h; h.push_back(make_unique<Var>("T"));
-          h.push_back(make_unique<Var>("token"));
-          preA.push_back(make_unique<FuncCall>("mapped_value", move(h))); }
+        preA.push_back(mapVal("T", "u"));
+        preA.push_back(make_unique<Var>("token"));
         auto pre = make_unique<FuncCall>("equals", move(preA));
 
         vector<unique_ptr<Expr>> args;
@@ -144,8 +147,11 @@ static Spec buildSpec()
 
         vector<unique_ptr<Expr>> ni;
         ni.push_back(make_unique<Var>("token"));
-        { vector<unique_ptr<Expr>> h; h.push_back(make_unique<Var>("T"));
-          ni.push_back(make_unique<FuncCall>("dom", move(h))); }
+        {
+            vector<unique_ptr<Expr>> h;
+            h.push_back(make_unique<Var>("T"));
+            ni.push_back(make_unique<FuncCall>("dom", move(h)));
+        }
         auto post = make_unique<FuncCall>("not_in", move(ni));
 
         Response resp(HTTPResponseCode::OK_200, post->clone());
@@ -153,7 +159,7 @@ static Spec buildSpec()
         blocks.push_back(make_unique<API>(move(pre), move(apicall), move(resp)));
     }
 
-    /* --- globals & init --- */
+    // globals & init
     vector<unique_ptr<Decl>> globals;
     globals.push_back(make_unique<Decl>(
         "U", make_unique<MapType>(
@@ -169,6 +175,7 @@ static Spec buildSpec()
     vector<unique_ptr<Init>> inits;
     inits.push_back(make_unique<Init>(
         "U", make_unique<Map>(vector<pair<unique_ptr<Var>,unique_ptr<Expr>>>())));
+
     inits.push_back(make_unique<Init>(
         "T", make_unique<Map>(vector<pair<unique_ptr<Var>,unique_ptr<Expr>>>())));
 
@@ -177,8 +184,5 @@ static Spec buildSpec()
                 std::move(blocks));
 }
 
-/* ────────────────────────────────────────────────
- * 3. Export globals for the driver
- * ──────────────────────────────────────────────── */
 Program clientProgram = buildClientProgram();
 Spec    spec          = buildSpec();

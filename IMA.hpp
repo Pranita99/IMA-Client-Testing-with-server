@@ -219,7 +219,7 @@ static vector<string> getMutatedVars(const API& blk,
     return maps;
 }
 
-/* NEW: collect **scalars** mentioned in Post (to hoist before Post) */
+/* collect **scalars** mentioned in Post (to hoist before Post) */
 static void collectScalars(const Expr* e,
                            std::vector<std::string>& out,
                            const TypeMap& tmap)
@@ -263,9 +263,7 @@ static Env createTau(const vector<string>& f, const vector<string>& a)
     return τ;
 }
 
-/* ══════════════════════════════════════
-   3) IMA transformation
-   ══════════════════════════════════════*/
+
 Program IMA(const Program& P,
             const Spec&    spec,
             SymbolTable&   sym,
@@ -316,40 +314,40 @@ Program IMA(const Program& P,
                  make_unique<FuncCall>("assume", move(a))) );
         }
 
-        /* -----  ORIGINAL CALL  --------------------------------------- */
+      
         out.push_back(cloneStmt(sp.get()));
 
-        /* -----  MAP VERSION BUMPS  ----------------------------------- */
+       
         auto mutated = getMutatedVars(*blk, formal, τ);
         for (auto &m : mutated)
-            if (sym.exists(Var(m))) gMapVer.bump(m);   // snapshot ++
+            if (sym.exists(Var(m))) gMapVer.bump(m);  
 
-        /* -----  SCALAR HOIST before POST  ---------------------------- */
+        
         {
-            std::vector<std::string> scalars;
+           std::vector<std::string> scalars;
             collectScalars(blk->call->response.expr.get(), scalars, tmap);
             std::sort(scalars.begin(), scalars.end());
             scalars.erase(std::unique(scalars.begin(), scalars.end()), scalars.end());
 
             for (auto& v : scalars) {
-                if (!sym.exists(Var(v))) continue;    // only known program vars
-                // v = input();
+                if (!sym.exists(Var(v))) continue;        
                 std::vector<std::unique_ptr<Expr>> noArgs;
-                auto fresh = std::make_unique<FuncCall>("input", std::move(noArgs));
-                out.push_back( std::make_unique<Assign>( std::make_unique<Var>(v),
-                                                         std::move(fresh) ) );
-            }
+
+                out.push_back(make_unique<Assign>( make_unique<Var>(v),
+                    make_unique<FuncCall>("fresh", std::move(noArgs)) ));
         }
 
-        /* -----  POST  (translated **after** bump & hoist) ------------- */
+        
         if (auto post = renameExprWithMap(blk->call->response.expr.get(), τ)) {
             vector<unique_ptr<Expr>> a; a.push_back(move(post));
             out.push_back( make_unique<FuncCallStmt>(
                  make_unique<FuncCall>("assert", move(a))) );
         }
     }
+}
 
     return Program(move(out));
 }
 
-#endif /* IMA_HPP */
+
+#endif 
