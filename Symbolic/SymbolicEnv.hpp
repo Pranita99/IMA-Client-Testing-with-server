@@ -6,13 +6,20 @@
 #include <vector>
 #include <map>
 
+/**
+ * SymbolicEnv — extended with staged pinning + model binding support.
+ * ✅ Drop-in replacement for your old version.
+ * Adds:
+ *   - bindModelValues()
+ *   - hasValue(), getValue()
+ */
 class SymbolicEnv
 {
 public:
     struct MapSyms {
         std::string dom;   // (Array String Bool)
-        std::string val;   // (Array String String)                  
-        std::string bval;  // (Array String (Array String Bool))     -- declared iff has_bucket
+        std::string val;   // (Array String String)
+        std::string bval;  // (Array String (Array String Bool)) -- declared iff has_bucket
         bool        has_bucket = false;
     };
 
@@ -75,6 +82,40 @@ public:
         return id;
     }
 
+    /* ── Pinning & staged solving ─────────────────────────────────────── */
+    // Record a concrete value for an existing SSA (used in staged/concolic runs).
+    void pinValue(const std::string& ssa, const std::string& concrete) {
+        if (!ssa.empty()) pinnedValues[ssa] = concrete;
+    }
+
+    // NEW: bind Z3 model values into environment mid-run
+    void bindModelValues(const std::unordered_map<std::string,std::string>& model) {
+        for (const auto& [ssa, val] : model) {
+            if (!ssa.empty()) pinnedValues[ssa] = val;
+        }
+    }
+
+    // Check if variable currently has a concrete value (via pinned SSA)
+    bool hasValue(const std::string& var) const {
+        auto it = scalars.find(var);
+        if (it == scalars.end()) return false;
+        return pinnedValues.find(it->second) != pinnedValues.end();
+    }
+
+    // Get the concrete value of a variable if available
+    std::string getValue(const std::string& var) const {
+        auto it = scalars.find(var);
+        if (it == scalars.end()) return "";
+        auto jt = pinnedValues.find(it->second);
+        return (jt != pinnedValues.end()) ? jt->second : "";
+    }
+
+    // Helper to lookup last SSA name for a base variable without bumping
+    std::string peekScalar(const std::string& var) const {
+        auto it = scalars.find(var);
+        return (it == scalars.end()) ? "" : it->second;
+    }
+
     /* ── Constraints & warnings ───────────────────────────────────────── */
     void addPredicate(const std::string& p) {
         if (!p.empty()) { preds.push_back(p); names.push_back("c" + std::to_string(++pc)); }
@@ -84,13 +125,28 @@ public:
     const std::vector<std::string>& getPredNames() const { return names; }
 
     /* ── SMT-LIB serialisation ────────────────────────────────────────── */
-    std::string toSMTLib() const { return emitSmtBody(); }
+    std::string toSMTLib() const { return emitSmtBody({}, false); }
+
+    // Overload that includes pinned SSA equalities
+    std::string toSMTLib(const std::map<std::string,std::string>& extraPins) const {
+        return emitSmtBody(extraPins, true);
+    }
 
     const std::unordered_map<std::string,std::string>& var2id() const { return scalars; }
     const std::unordered_map<std::string,std::string>& id2var() const { return id2var_; }
 
 private:
-    std::string emitSmtBody() const
+    static std::string quoteString(const std::string& s) {
+        std::string r; r.reserve(s.size()+2); r.push_back('"');
+        for (char c : s) {
+            if (c=='"') r += "\\\"";
+            else r.push_back(c);
+        }
+        r.push_back('"');
+        return r;
+    }
+
+    std::string emitSmtBody(const std::map<std::string,std::string>& extraPins, bool includePins) const
     {
         std::ostringstream out;
         out << "(set-logic ALL)\n";
@@ -119,10 +175,20 @@ private:
         for (const auto& d : uf_decls) out << d << "\n";
         if (!uf_decls.empty()) out << '\n';
 
-        // Predicates as Bool consts we can (get-value) later — no :named labels
+        // Predicates as Bool consts
         for (size_t i = 0; i < preds.size(); ++i) {
             out << "(declare-const " << names[i] << " Bool)\n";
             out << "(assert (= " << names[i] << " " << preds[i] << "))\n";
+        }
+
+        // Append pinned equalities if any
+        if (includePins) {
+            for (const auto& kv : pinnedValues) {
+                out << "(assert (= " << kv.first << " " << quoteString(kv.second) << "))\n";
+            }
+            for (const auto& kv : extraPins) {
+                out << "(assert (= " << kv.first << " " << quoteString(kv.second) << "))\n";
+            }
         }
 
         return out.str();
@@ -141,4 +207,7 @@ private:
     // maps / UFs
     std::map<std::string,MapSyms>               maps;
     std::unordered_set<std::string>             uf_decls;
+
+    // pinned SSA → concrete value map
+    std::map<std::string,std::string>           pinnedValues;
 };

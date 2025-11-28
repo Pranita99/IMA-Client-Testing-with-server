@@ -1,0 +1,8 @@
+# map,key_type,value_type,GET_one_template,GET_keys_template,SET_one_template,notes
+# Use {key} and {value} placeholders in templates.
+C,String,String,http://localhost:8089/state/C?key={key},http://localhost:8089/state/C/keys,http://localhost:8089/state/C/set?key={key}&value={value},""
+Cart,String,String,http://localhost:8089/state/Cart?key={key},http://localhost:8089/state/Cart/keys,http://localhost:8089/state/Cart/set?key={key}&value={value},""
+M,String,String,http://localhost:8089/state/M?key={key},http://localhost:8089/state/M/keys,http://localhost:8089/state/M/set?key={key}&value={value},""
+Q,String,String,http://localhost:8089/state/Q?key={key},http://localhost:8089/state/Q/keys,http://localhost:8089/state/Q/set?key={key}&value={value},""
+T,String,String,http://localhost:8089/state/T?key={key},http://localhost:8089/state/T/keys,http://localhost:8089/state/T/set?key={key}&value={value},""
+U,String,String,http://localhost:8089/state/U?key={key},http://localhost:8089/state/U/keys,http://localhost:8089/state/U/set?key={key}&value={value},""
