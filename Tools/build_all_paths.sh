@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 # --------------------------------------------------------------------
 # Build & run every  testPaths/**/path*.cpp
 # -> build/paths/<app>_<path>.{smt2,pretty.smt2,model.json,ctc.json,ctc.txt,...}
