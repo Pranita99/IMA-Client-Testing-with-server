@@ -1,0 +1,22 @@
+{
+  "path": "constraints",
+  "steps": [
+    { "step": 1, "role": "input", "name": "username", "value": "auto_x7", "at": "" },
+    { "step": 2, "role": "input", "name": "password", "value": "auto_x9", "at": "" },
+    { "step": 3, "role": "effect", "name": "token", "value": "auto_x29", "at": "login_success" },
+    { "step": 4, "role": "effect", "name": "canteen_id", "value": "auto_x15", "at": "getmenu" },
+    { "step": 5, "role": "effect", "name": "menuList", "value": "auto_x17", "at": "getmenu" },
+    { "step": 6, "role": "effect", "name": "item_id", "value": "auto_x20", "at": "add_to_cart" },
+    { "step": 7, "role": "effect", "name": "token", "value": "auto_x29", "at": "add_to_cart" },
+    { "step": 8, "role": "effect", "name": "savedOrder", "value": "auto_x25", "at": "order" },
+    { "step": 9, "role": "effect", "name": "savedOrder_id", "value": "auto_x27", "at": "order" },
+    { "step": 10, "role": "effect", "name": "token", "value": "auto_x29", "at": "order" }
+  ],
+  "checks": [
+    { "at": "signup_success#1", "pre": true, "post": true },
+    { "at": "login_success#1", "pre": true, "post": true },
+    { "at": "getmenu#1", "pre": true, "post": true },
+    { "at": "add_to_cart#1", "pre": true, "post": true },
+    { "at": "order#1", "pre": false, "post": true }
+  ]
+}

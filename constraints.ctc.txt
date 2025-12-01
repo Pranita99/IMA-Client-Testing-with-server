@@ -1,0 +1,12 @@
+CTC for constraints
+---------------------------------
+Step 1  [input]  username = auto_x7   @ 
+Step 2  [input]  password = auto_x9   @ 
+Step 3  [effect]  token = auto_x29   @ login_success
+Step 4  [effect]  canteen_id = auto_x15   @ getmenu
+Step 5  [effect]  menuList = auto_x17   @ getmenu
+Step 6  [effect]  item_id = auto_x20   @ add_to_cart
+Step 7  [effect]  token = auto_x29   @ add_to_cart
+Step 8  [effect]  savedOrder = auto_x25   @ order
+Step 9  [effect]  savedOrder_id = auto_x27   @ order
+Step 10  [effect]  token = auto_x29   @ order

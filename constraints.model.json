@@ -1,0 +1,19 @@
+{
+  "path": "constraints",
+  "vars": {
+    "savedOrder_id": "auto_x27",
+    "Q": "auto_x6",
+    "U": "auto_x1",
+    "token": "auto_x29",
+    "T": "auto_x2",
+    "password": "auto_x9",
+    "M": "auto_x3",
+    "menuList": "auto_x17",
+    "C": "auto_x4",
+    "item_id": "auto_x20",
+    "Cart": "auto_x5",
+    "username": "auto_x7",
+    "canteen_id": "auto_x15",
+    "savedOrder": "auto_x25"
+  }
+}
